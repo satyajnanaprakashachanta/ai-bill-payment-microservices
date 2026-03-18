@@ -1,0 +1,128 @@
+version: '3.8'
+
+services:
+
+  postgres:
+    image: postgres:15
+    container_name: billpayment-db
+    environment:
+      POSTGRES_DB: billpayment_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 9010Asj*#
+    ports:
+          - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - billpayment-network
+
+  file-service:
+    build:
+      context: ../Spring Project/file-service
+    container_name: file-service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/billpayment_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 9010Asj*#
+    depends_on:
+      - postgres
+    networks:
+      - billpayment-network
+
+  ai-service:
+    build:
+      context: ../Spring Project/ai-service
+    container_name: ai-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/billpayment_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 9010Asj*#
+      GROQ_API_KEY: YOUR_GROQ_API_KEY_HERE
+      GROQ_API_URL: https://api.groq.com/openai/v1/chat/completions
+      GROQ_API_MODEL: llama-3.3-70b-versatile
+    depends_on:
+      - postgres
+    networks:
+      - billpayment-network
+
+  verification-service:
+    build:
+      context: ../Spring Project/verification-service
+    container_name: verification-service
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/billpayment_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 9010Asj*#
+    depends_on:
+      - postgres
+    networks:
+      - billpayment-network
+
+  payment-service:
+    build:
+      context: ../Spring Project/payment-service
+    container_name: payment-service
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/billpayment_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 9010Asj*#
+    depends_on:
+      - postgres
+    networks:
+      - billpayment-network
+
+  notification-service:
+    build:
+      context: ../Spring Project/notification-service
+    container_name: notification-service
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/billpayment_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 9010Asj*#
+    depends_on:
+      - postgres
+    networks:
+      - billpayment-network
+
+  api-gateway:
+    build:
+      context: ../Spring Project/api-gateway
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - file-service
+      - ai-service
+      - verification-service
+      - payment-service
+      - notification-service
+    networks:
+      - billpayment-network
+
+  frontend:
+    build:
+      context: ../bill-payment-frontend
+    container_name: frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - billpayment-network
+
+networks:
+  billpayment-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
